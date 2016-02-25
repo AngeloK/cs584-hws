@@ -76,3 +76,5 @@ target/
 # dataset
 dataset/
 *.zip
+data/
+report/
