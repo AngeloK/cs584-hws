@@ -75,4 +75,4 @@ target/
 
 # dataset
 dataset/
-
+*.zip
