@@ -6,6 +6,14 @@ import numpy as np
 np.set_printoptions(threshold=np.inf)
 
 
+class DataLengthNotMatchError(Exception):
+
+    def __init__(self):
+        super(DataLengthNotMatchError, self).__init__(
+            "The length of predicted data and testing data is not matching"
+        )
+
+
 class GaussianDistributionAnalysis(object):
 
     def __init__(self):
@@ -54,13 +62,16 @@ class GaussianDistributionAnalysis(object):
                     :])
         return predicted_class
 
-    def comfusion_matrix(self, predicted_class, testing_class):
-        pass
+
+    def is_parameter_valid(self, predicted_class, testing_class):
+        if predicted_class.shape[0] != testing_class.shape[0]:
+            return False
+        return True
 
     def precision(self, predicted_class, testing_class):
-        if predicted_class.shape[0] != testing_class.shape[0]:
-            raise ValueError(
-                "predicted class array should have same length as testing class array")
+        if not self.is_parameter_valid(predicted_class, testing_class):
+            raise DataLengthNotMatchError
+
         n_testing_sample = predicted_class.shape[0]
         accurate_count = 0
         for i in range(n_testing_sample):
@@ -114,6 +125,32 @@ class SingleVariateGDA(GaussianDistributionAnalysis):
             predicted_class.append(predicted)
         # print predicted_class
         return np.array(predicted_class)
+
+    def confusion_matrix(self, predicted_class, testing_class):
+        if not self.is_parameter_valid(predicted_class, testing_class):
+            raise DataLengthNotMatchError
+        # Compute each variable as 0
+        true_positive = 0
+        true_negative = 0
+        false_positive = 0
+        false_negative = 0
+
+        n_sample = predicted_class.shape[0]
+        for sample_index in range(n_sample):
+            if testing_class[sample_index] == self._class_list[0]:
+                if predicted_class[sample_index] == testing_class[sample_index]:
+                    true_positive += 1
+                else:
+                    true_negative += 1
+            else:
+                if predicted_class[sample_index] == testing_class[sample_index]:
+                    false_positive += 1
+                else:
+                    false_negative += 1
+        print "TP %d" % true_positive
+        print "TN %d" % true_negative
+        print "FP %d" % false_positive
+        print "FN %d" % false_negative
 
     def perform(self, testing_class):
         pass
