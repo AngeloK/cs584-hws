@@ -78,3 +78,5 @@ dataset/
 *.zip
 data/
 report/
+# Ignore IPpython notebook temp files
+*.ipynb

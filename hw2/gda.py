@@ -3,6 +3,7 @@
 
 from __future__ import division
 import numpy as np
+import pandas as pd
 np.set_printoptions(threshold=np.inf)
 
 
@@ -20,22 +21,20 @@ class GaussianDistributionAnalysis(object):
         self.mean_ = None
         self.variance_ = None
 
-    def compute_parameters(self, training_data):
+    def compute_parameters(self, training_data, class_col_idx):
         # Import data
-        self._x = training_data[:, :-1]
-        self._y = training_data[:, -1]
-        self.n_sample = self._x.shape[0]
+        if not isinstance(training_data, pd.core.frame.DataFrame):
+            raise TypeError("DataFrame instance needed")
+        y = training_data.as_matrix()[:, class_col_idx]
+        self.n_sample = y.shape[0]
+        self._split_class(y)
+        self._compute_main_and_variance(training_data)
 
-        # Compute parameters
-        self._compute_main()
-        self._compute_variance()
-        self._split_class()
-
-    def _split_class(self):
+    def _split_class(self, y):
         from collections import Counter
         # Compute of the number each class apppearing in training data set using
         # buildin python tool
-        class_count = Counter(self._y)
+        class_count = Counter(y)
         self._class_list = [k for k in class_count.keys()]
 
     def prior(self, class_):
@@ -68,49 +67,35 @@ class GaussianDistributionAnalysis(object):
             return False
         return True
 
-    def precision(self, predicted_class, testing_class):
-        if not self.is_parameter_valid(predicted_class, testing_class):
-            raise DataLengthNotMatchError
-
-        n_testing_sample = predicted_class.shape[0]
-        accurate_count = 0
-        for i in range(n_testing_sample):
-            if predicted_class[i] == testing_class[i]:
-                accurate_count += 1
-        return accurate_count/n_testing_sample
-
-    def recall(self, predicted_class, testing_class):
-        pass
-
 class SingleVariateGDA(GaussianDistributionAnalysis):
 
     def __init__(self):
         super(SingleVariateGDA, self).__init__()
 
-    def train(self, training_data):
-        self.compute_parameters(training_data)
+    def train(self, training_data, class_col_idx):
+        self.class_col_idx = class_col_idx
+        self.compute_parameters(training_data, class_col_idx=class_col_idx)
 
-    def _compute_main(self):
+    def _compute_main_and_variance(self, training_data):
         # If axis=0, then this function will compute the mean of column.
-        self.mean_ = np.mean(self._x, axis=0)[0]
-
-    def _compute_variance(self):
-        # If the training data is 1-d dataset, then this will compute the
-        # variance if feature x, else this function will compute the covariance
-        # matrix
-        self.variance_ = np.var(self._x, axis=0)[0]
+        self.mean_ = []
+        self.variance_ = []
+        for idx, c in enumerate(self._class_list):
+            class_column_name = training_data.columns[self.class_col_idx]
+            self.mean_.append(training_data[training_data[class_column_name] == c].mean()[0])
+            self.variance_.append(training_data[training_data[class_column_name] == c].var()[0])
 
     def likelihood(self, x, class_):
-        p_x_given_y = np.log(
-            (1/(np.sqrt(2 * np.pi) * self.variance_)) * np.exp((-1/(2*self.variance_))*(x - self.mean_) ** 2)
-        ) + np.log(self.prior(class_))
-        return p_x_given_y
+        class_idx = self._class_list.index(class_)
+        log_likelihood = np.log(1/np.sqrt(2 * np.pi)) - np.log(self.variance_[class_idx]) +\
+            ((-1/2) * ((x - self.mean_[class_idx])/self.variance_[class_idx]) ** 2) +\
+            self.prior(class_)
+        return log_likelihood
 
     def classify(self, testing_sample):
-        print "class 'yes' prior: %s" % str(self.prior(self._class_list[0]))
-        print "class 'no' prior: %s" % str(self.prior(self._class_list[1]))
         # transform datatype into 'float' for computation
-        testing_sample = np.array(testing_sample, dtype=np.float)
+        # testing_sample = np.array(testing_sample, dtype=np.float)
+        testing_sample = testing_sample.as_matrix()[:, :-1]
         n_sample = testing_sample.shape[0]
 
         predicted_class = []
@@ -126,10 +111,13 @@ class SingleVariateGDA(GaussianDistributionAnalysis):
         # print predicted_class
         return np.array(predicted_class)
 
-    def confusion_matrix(self, predicted_class, testing_class):
+    def confusion_matrix(self, predicted_class, testing_class, selected_class=None):
+        # selected_class defined as the value we decided as positive
         if not self.is_parameter_valid(predicted_class, testing_class):
             raise DataLengthNotMatchError
         # Compute each variable as 0
+        if not selected_class:
+            selected_class = self._class_list[0]
         true_positive = 0
         true_negative = 0
         false_positive = 0
@@ -137,24 +125,30 @@ class SingleVariateGDA(GaussianDistributionAnalysis):
 
         n_sample = predicted_class.shape[0]
         for sample_index in range(n_sample):
-            if testing_class[sample_index] == self._class_list[0]:
+            if testing_class[sample_index] == selected_class:
                 if predicted_class[sample_index] == testing_class[sample_index]:
                     true_positive += 1
                 else:
-                    true_negative += 1
+                    false_positive += 1
             else:
                 if predicted_class[sample_index] == testing_class[sample_index]:
-                    false_positive += 1
+                    true_negative += 1
                 else:
                     false_negative += 1
-        print "TP %d" % true_positive
-        print "TN %d" % true_negative
-        print "FP %d" % false_positive
-        print "FN %d" % false_negative
 
-    def perform(self, testing_class):
-        pass
+        self.accuracy = (true_positive + true_negative) / n_sample
+        self.precision = true_positive /(true_positive + false_positive)
+        self.recall = true_positive / (true_positive + false_negative)
+        self.f_measure= 2*self.precision * self.recall/ (self.precision + self.recall)
 
+    def perform(self):
+        if not self.accuracy:
+            print "Please compute confusion matrix first"
+            return
+        print "Accuracy = %.2f" % self.accuracy
+        print "Precision = %.2f" % self.precision
+        print "Recall = %.2f" % self.recall
+        print "F-measure = %.2f" % self.f_measure
 
 class MultivariateGDA(GaussianDistributionAnalysis):
 
