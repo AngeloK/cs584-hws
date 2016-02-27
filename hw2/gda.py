@@ -22,9 +22,12 @@ class GaussianDistributionAnalysis(object):
         self.variance_ = None
 
     def compute_parameters(self, training_data, class_col_idx):
-        # Import data
+        # The type of data shoudl be pandas's Dataframe.
+        # we use this datatype fot the sake of better filter data based
+        # on specific value
         if not isinstance(training_data, pd.core.frame.DataFrame):
             raise TypeError("DataFrame instance needed")
+        self.class_column_name = training_data.columns[class_col_idx]
         y = training_data.as_matrix()[:, class_col_idx]
         self.n_sample = y.shape[0]
         self._split_class(y)
@@ -67,13 +70,12 @@ class GaussianDistributionAnalysis(object):
             return False
         return True
 
-class SingleVariateGDA(GaussianDistributionAnalysis):
+class SingleDimensionTwoClassGDA(GaussianDistributionAnalysis):
 
     def __init__(self):
-        super(SingleVariateGDA, self).__init__()
+        super(SingleDimensionTwoClassGDA, self).__init__()
 
     def train(self, training_data, class_col_idx):
-        self.class_col_idx = class_col_idx
         self.compute_parameters(training_data, class_col_idx=class_col_idx)
 
     def _compute_main_and_variance(self, training_data):
@@ -82,12 +84,17 @@ class SingleVariateGDA(GaussianDistributionAnalysis):
         self.variance_ = []
         for idx, c in enumerate(self._class_list):
             class_column_name = training_data.columns[self.class_col_idx]
-            self.mean_.append(training_data[training_data[class_column_name] == c].mean()[0])
-            self.variance_.append(training_data[training_data[class_column_name] == c].var()[0])
+            self.mean_.append(
+                training_data[training_data[class_column_name] == c].mean()[0]
+            )
+            self.variance_.append(
+                training_data[training_data[class_column_name] == c].var()[0]
+            )
 
     def likelihood(self, x, class_):
         class_idx = self._class_list.index(class_)
-        log_likelihood = np.log(1/np.sqrt(2 * np.pi)) - np.log(self.variance_[class_idx]) +\
+        log_likelihood = np.log(1/np.sqrt(2 * np.pi)) -\
+            np.log(self.variance_[class_idx]) +\
             ((-1/2) * ((x - self.mean_[class_idx])/self.variance_[class_idx]) ** 2) +\
             self.prior(class_)
         return log_likelihood
@@ -150,7 +157,11 @@ class SingleVariateGDA(GaussianDistributionAnalysis):
         print "Recall = %.2f" % self.recall
         print "F-measure = %.2f" % self.f_measure
 
-class MultivariateGDA(GaussianDistributionAnalysis):
+class MultiDimensionsTwoClassGDA(GaussianDistributionAnalysis):
 
     def __init__(self):
+        super(SingleDimensionTwoClassGDA, self).__init__()
+
+    def train(self, training_data, class_col_idx):
         pass
+
