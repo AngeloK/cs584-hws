@@ -27,11 +27,11 @@ class GaussianDistributionAnalysis(object):
         # on specific value
         if not isinstance(training_data, pd.core.frame.DataFrame):
             raise TypeError("DataFrame instance needed")
+        self.class_col_idx = class_col_idx
         self.class_column_name = training_data.columns[class_col_idx]
         y = training_data.as_matrix()[:, class_col_idx]
         self.n_sample = y.shape[0]
         self._split_class(y)
-        self._compute_main_and_variance(training_data)
 
     def _split_class(self, y):
         from collections import Counter
@@ -39,6 +39,9 @@ class GaussianDistributionAnalysis(object):
         # buildin python tool
         class_count = Counter(y)
         self._class_list = [k for k in class_count.keys()]
+
+    def train(self, training_data, class_col_idx):
+        self.compute_parameters(training_data, class_col_idx=class_col_idx)
 
     def prior(self, class_):
         # Compute the possibility of p(y=classj)
@@ -53,30 +56,49 @@ class GaussianDistributionAnalysis(object):
         # print "class %s %s" % (class_, str(count))
         return count/self.n_sample
 
-    def predict(self, testing_data):
-        # Initialize a new empty np array to store predicted value
-        n_testing_sample = testing_data.shape[0]
-        predicted_class = np.empty(n_testing_sample, 1)
-        for sample_index in range(n_testing_sample):
-            predicted_class[sample_index] = self.classify(
-                testing_data[
-                    sample_index,
-                    :])
-        return predicted_class
-
+    # def predict(self, testing_data):
+        # # Initialize a new empty np array to store predicted value
+        # n_testing_sample = testing_data.shape[0]
+        # predicted_class = np.empty(n_testing_sample, 1)
+        # for sample_index in range(n_testing_sample):
+            # predicted_class[sample_index] = self.classify(
+                # testing_data[
+                    # sample_index,
+                    # :])
+        # return predicted_class
 
     def is_parameter_valid(self, predicted_class, testing_class):
         if predicted_class.shape[0] != testing_class.shape[0]:
             return False
         return True
 
+    def predict(self, testing_sample):
+        # transform datatype into 'float' for computation
+        # testing_sample = np.array(testing_sample, dtype=np.float)
+        testing_sample = testing_sample.as_matrix()[:, :-1]
+        n_sample = testing_sample.shape[0]
+
+        predicted_class = []
+        for sample_index in range(n_sample):
+            maximum_likelihood = -np.inf
+            predicted = ""
+            for c in self._class_list:
+                pro = self.likelihood(testing_sample[sample_index, :], c)
+                if pro > maximum_likelihood:
+                    maximum_likelihood = pro
+                    predicted = c
+            predicted_class.append(predicted)
+        # print predicted_class
+        return np.array(predicted_class)
+
 class SingleDimensionTwoClassGDA(GaussianDistributionAnalysis):
 
     def __init__(self):
         super(SingleDimensionTwoClassGDA, self).__init__()
 
-    def train(self, training_data, class_col_idx):
-        self.compute_parameters(training_data, class_col_idx=class_col_idx)
+    def compute_parameters(self, training_data, class_col_idx):
+        super(SingleDimensionTwoClassGDA, self).compute_parameters(training_data, class_col_idx)
+        self._compute_main_and_variance(training_data)
 
     def _compute_main_and_variance(self, training_data):
         # If axis=0, then this function will compute the mean of column.
@@ -98,25 +120,6 @@ class SingleDimensionTwoClassGDA(GaussianDistributionAnalysis):
             ((-1/2) * ((x - self.mean_[class_idx])/self.variance_[class_idx]) ** 2) +\
             self.prior(class_)
         return log_likelihood
-
-    def classify(self, testing_sample):
-        # transform datatype into 'float' for computation
-        # testing_sample = np.array(testing_sample, dtype=np.float)
-        testing_sample = testing_sample.as_matrix()[:, :-1]
-        n_sample = testing_sample.shape[0]
-
-        predicted_class = []
-        for sample_index in range(n_sample):
-            maximum_likelihood = -np.inf
-            predicted = ""
-            for c in self._class_list:
-                p = self.likelihood(testing_sample[sample_index, :], c)
-                if p > maximum_likelihood:
-                    maximum_likelihood = p
-                    predicted = c
-            predicted_class.append(predicted)
-        # print predicted_class
-        return np.array(predicted_class)
 
     def confusion_matrix(self, predicted_class, testing_class, selected_class=None):
         # selected_class defined as the value we decided as positive
@@ -160,8 +163,26 @@ class SingleDimensionTwoClassGDA(GaussianDistributionAnalysis):
 class MultiDimensionsTwoClassGDA(GaussianDistributionAnalysis):
 
     def __init__(self):
-        super(SingleDimensionTwoClassGDA, self).__init__()
+        super(MultiDimensionsTwoClassGDA, self).__init__()
 
-    def train(self, training_data, class_col_idx):
-        pass
+    def compute_parameters(self, training_data, class_col_idx):
+        super(MultiDimensionsTwoClassGDA, self).compute_parameters(training_data, class_col_idx)
+        self._compute_main_and_covariance_matrix(training_data)
+
+    def _compute_main_and_covariance_matrix(self, training_data):
+        self.mean_ = training_data.groupby(self.class_column_name).mean().as_matrix()
+        self.cov_ = []
+        grouped_cov = training_data.groupby(self.class_column_name).cov()
+        for c in self._class_list:
+            self.cov_.append(grouped_cov.loc[c].as_matrix())
+
+    def likelihood(self, x, class_):
+        class_idx = self._class_list.index(class_)
+        log_likelihood = -(2/self.n_sample * np.log(2 * np.pi) + 0.5 * np.log(np.linalg.det(self.cov_[class_idx]))) - \
+            0.5 * np.dot(
+                np.dot(
+                    (x - self.mean_[class_idx]).T, np.linalg.inv(self.cov_[class_idx])),
+                    (x - self.mean_[class_idx])
+            ) + self.prior(class_)
+        return log_likelihood
 
