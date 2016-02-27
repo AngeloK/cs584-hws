@@ -15,7 +15,7 @@ class DataLengthNotMatchError(Exception):
         )
 
 
-class GaussianDistributionAnalysis(object):
+class GaussianDiscriminantAnalysis(object):
 
     def __init__(self):
         self.mean_ = None
@@ -56,17 +56,6 @@ class GaussianDistributionAnalysis(object):
         # print "class %s %s" % (class_, str(count))
         return count/self.n_sample
 
-    # def predict(self, testing_data):
-        # # Initialize a new empty np array to store predicted value
-        # n_testing_sample = testing_data.shape[0]
-        # predicted_class = np.empty(n_testing_sample, 1)
-        # for sample_index in range(n_testing_sample):
-            # predicted_class[sample_index] = self.classify(
-                # testing_data[
-                    # sample_index,
-                    # :])
-        # return predicted_class
-
     def is_parameter_valid(self, predicted_class, testing_class):
         if predicted_class.shape[0] != testing_class.shape[0]:
             return False
@@ -91,7 +80,51 @@ class GaussianDistributionAnalysis(object):
         # print predicted_class
         return np.array(predicted_class)
 
-class SingleDimensionTwoClassGDA(GaussianDistributionAnalysis):
+    def confusion_matrix(self, predicted_class, testing_class, selected_class=None):
+        # selected_class defined as the value we decided as positive
+        if not self.is_parameter_valid(predicted_class, testing_class):
+            raise DataLengthNotMatchError
+        # Compute each variable as 0
+        if not selected_class:
+            selected_class = self._class_list[0]
+        true_positive = 0
+        true_negative = 0
+        false_positive = 0
+        false_negative = 0
+
+        n_sample = predicted_class.shape[0]
+        for sample_index in range(n_sample):
+            if testing_class[sample_index] == selected_class:
+                if predicted_class[sample_index] == testing_class[sample_index]:
+                    true_positive += 1
+                else:
+                    false_positive += 1
+            else:
+                if predicted_class[sample_index] == testing_class[sample_index]:
+                    true_negative += 1
+                else:
+                    false_negative += 1
+        print "TP %d" %true_positive
+        print "FP %d" %false_positive
+        print "TN %d" %true_negative
+        print "FN %d" %false_negative
+
+        self.accuracy = (true_positive + true_negative) / n_sample
+        self.precision = true_positive /(true_positive + false_positive)
+        self.recall = true_positive / (true_positive + false_negative)
+        self.f_measure= 2*self.precision * self.recall/ (self.precision + self.recall)
+
+    def perform(self):
+        if not self.accuracy:
+            print "Please compute confusion matrix first"
+            return
+        print "Accuracy = %.2f" % self.accuracy
+        print "Precision = %.2f" % self.precision
+        print "Recall = %.2f" % self.recall
+        print "F-measure = %.2f" % self.f_measure
+
+
+class SingleDimensionTwoClassGDA(GaussianDiscriminantAnalysis):
 
     def __init__(self):
         super(SingleDimensionTwoClassGDA, self).__init__()
@@ -121,46 +154,8 @@ class SingleDimensionTwoClassGDA(GaussianDistributionAnalysis):
             self.prior(class_)
         return log_likelihood
 
-    def confusion_matrix(self, predicted_class, testing_class, selected_class=None):
-        # selected_class defined as the value we decided as positive
-        if not self.is_parameter_valid(predicted_class, testing_class):
-            raise DataLengthNotMatchError
-        # Compute each variable as 0
-        if not selected_class:
-            selected_class = self._class_list[0]
-        true_positive = 0
-        true_negative = 0
-        false_positive = 0
-        false_negative = 0
 
-        n_sample = predicted_class.shape[0]
-        for sample_index in range(n_sample):
-            if testing_class[sample_index] == selected_class:
-                if predicted_class[sample_index] == testing_class[sample_index]:
-                    true_positive += 1
-                else:
-                    false_positive += 1
-            else:
-                if predicted_class[sample_index] == testing_class[sample_index]:
-                    true_negative += 1
-                else:
-                    false_negative += 1
-
-        self.accuracy = (true_positive + true_negative) / n_sample
-        self.precision = true_positive /(true_positive + false_positive)
-        self.recall = true_positive / (true_positive + false_negative)
-        self.f_measure= 2*self.precision * self.recall/ (self.precision + self.recall)
-
-    def perform(self):
-        if not self.accuracy:
-            print "Please compute confusion matrix first"
-            return
-        print "Accuracy = %.2f" % self.accuracy
-        print "Precision = %.2f" % self.precision
-        print "Recall = %.2f" % self.recall
-        print "F-measure = %.2f" % self.f_measure
-
-class MultiDimensionsTwoClassGDA(GaussianDistributionAnalysis):
+class MultiDimensionsTwoClassGDA(GaussianDiscriminantAnalysis):
 
     def __init__(self):
         super(MultiDimensionsTwoClassGDA, self).__init__()
@@ -185,4 +180,3 @@ class MultiDimensionsTwoClassGDA(GaussianDistributionAnalysis):
                     (x - self.mean_[class_idx])
             ) + self.prior(class_)
         return log_likelihood
-

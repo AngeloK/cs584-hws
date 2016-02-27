@@ -26,10 +26,15 @@ if __name__ == "__main__":
 
     data1 = pd.read_csv(base_path+"iris/iris.csv")
     for train_index, test_index in kf:
+        print "===="
         train_data, test_data = data1.ix[train_index], data1.ix[test_index]
-        break
-    mg = MultiDimensionsTwoClassGDA()
-    mg.train(train_data, -1)
-    print mg.mean_
-    print mg.cov_
-    print mg.predict(test_data)
+        mg = MultiDimensionsTwoClassGDA()
+        mg.train(train_data, -1)
+        mg.confusion_matrix(mg.predict(test_data), test_data.as_matrix()[:, -1])
+        mg.perform()
+        print "===="
+        print "\n"
+
+    # print mg.mean_
+    # print mg.cov_
+    # print mg.predict(test_data)
