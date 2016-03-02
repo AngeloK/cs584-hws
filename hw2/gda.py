@@ -53,7 +53,6 @@ class GaussianDiscriminantAnalysis(object):
             except:
                 # Ingore invalid value
                 pass
-        # print "class %s %s" % (class_, str(count))
         return count/self.n_sample
 
     def is_parameter_valid(self, predicted_class, testing_class):
@@ -77,8 +76,74 @@ class GaussianDiscriminantAnalysis(object):
                     maximum_likelihood = pro
                     predicted = c
             predicted_class.append(predicted)
-        # print predicted_class
         return np.array(predicted_class)
+
+
+class SingleDimensionTwoClassGDA(GaussianDiscriminantAnalysis):
+
+    def __init__(self):
+        super(SingleDimensionTwoClassGDA, self).__init__()
+
+    def compute_parameters(self, training_data, class_col_idx):
+        super(SingleDimensionTwoClassGDA, self).compute_parameters(training_data, class_col_idx)
+        self._compute_main_and_variance(training_data)
+
+    def _compute_main_and_variance(self, training_data):
+        self.mean_ = []
+        self.variance_ = []
+        for idx, c in enumerate(self._class_list):
+            class_column_name = training_data.columns[self.class_col_idx]
+            self.mean_.append(
+                training_data[training_data[class_column_name] == c].mean()[0]
+            )
+            self.variance_.append(
+                training_data[training_data[class_column_name] == c].var()[0]
+            )
+
+    def likelihood(self, x, class_):
+        class_idx = self._class_list.index(class_)
+        log_likelihood = np.log(1/np.sqrt(2 * np.pi)) -\
+            np.log(self.variance_[class_idx]) +\
+            ((-1/2) * ((x - self.mean_[class_idx])/self.variance_[class_idx]) ** 2) +\
+            self.prior(class_)
+        return log_likelihood
+
+
+class MultiDimensionsGDA(GaussianDiscriminantAnalysis):
+
+    def __init__(self):
+        super(MultiDimensionsGDA, self).__init__()
+
+    def compute_parameters(self, training_data, class_col_idx):
+        super(MultiDimensionsGDA, self).compute_parameters(training_data, class_col_idx)
+        self._compute_main_and_covariance_matrix(training_data)
+
+    def _compute_main_and_covariance_matrix(self, training_data):
+        self.mean_ = training_data.groupby(self.class_column_name).mean().as_matrix()
+        self.cov_ = []
+        grouped_cov = training_data.groupby(self.class_column_name).cov()
+        for c in self._class_list:
+            self.cov_.append(grouped_cov.loc[c].as_matrix())
+
+    def likelihood(self, x, class_):
+        class_idx = self._class_list.index(class_)
+        log_likelihood = -(2/self.n_sample * np.log(2 * np.pi) + 0.5 * np.log(np.linalg.det(self.cov_[class_idx]))) - \
+            0.5 * np.dot(
+                np.dot(
+                    (x - self.mean_[class_idx]).T, np.linalg.inv(self.cov_[class_idx])),
+                    (x - self.mean_[class_idx])
+            ) + self.prior(class_)
+        return log_likelihood
+
+    def confusion_matrix(self, predicted_class, testing_class):
+        print predicted_class
+        print testing_class
+
+
+class MultiDimensionsTwoClassGDA(MultiDimensionsGDA):
+
+    def __init__(self):
+        super(MultiDimensionsTwoClassGDA, self).__init__()
 
     def confusion_matrix(self, predicted_class, testing_class, selected_class=None):
         # selected_class defined as the value we decided as positive
@@ -122,61 +187,3 @@ class GaussianDiscriminantAnalysis(object):
         print "Precision = %.2f" % self.precision
         print "Recall = %.2f" % self.recall
         print "F-measure = %.2f" % self.f_measure
-
-
-class SingleDimensionTwoClassGDA(GaussianDiscriminantAnalysis):
-
-    def __init__(self):
-        super(SingleDimensionTwoClassGDA, self).__init__()
-
-    def compute_parameters(self, training_data, class_col_idx):
-        super(SingleDimensionTwoClassGDA, self).compute_parameters(training_data, class_col_idx)
-        self._compute_main_and_variance(training_data)
-
-    def _compute_main_and_variance(self, training_data):
-        # If axis=0, then this function will compute the mean of column.
-        self.mean_ = []
-        self.variance_ = []
-        for idx, c in enumerate(self._class_list):
-            class_column_name = training_data.columns[self.class_col_idx]
-            self.mean_.append(
-                training_data[training_data[class_column_name] == c].mean()[0]
-            )
-            self.variance_.append(
-                training_data[training_data[class_column_name] == c].var()[0]
-            )
-
-    def likelihood(self, x, class_):
-        class_idx = self._class_list.index(class_)
-        log_likelihood = np.log(1/np.sqrt(2 * np.pi)) -\
-            np.log(self.variance_[class_idx]) +\
-            ((-1/2) * ((x - self.mean_[class_idx])/self.variance_[class_idx]) ** 2) +\
-            self.prior(class_)
-        return log_likelihood
-
-
-class MultiDimensionsTwoClassGDA(GaussianDiscriminantAnalysis):
-
-    def __init__(self):
-        super(MultiDimensionsTwoClassGDA, self).__init__()
-
-    def compute_parameters(self, training_data, class_col_idx):
-        super(MultiDimensionsTwoClassGDA, self).compute_parameters(training_data, class_col_idx)
-        self._compute_main_and_covariance_matrix(training_data)
-
-    def _compute_main_and_covariance_matrix(self, training_data):
-        self.mean_ = training_data.groupby(self.class_column_name).mean().as_matrix()
-        self.cov_ = []
-        grouped_cov = training_data.groupby(self.class_column_name).cov()
-        for c in self._class_list:
-            self.cov_.append(grouped_cov.loc[c].as_matrix())
-
-    def likelihood(self, x, class_):
-        class_idx = self._class_list.index(class_)
-        log_likelihood = -(2/self.n_sample * np.log(2 * np.pi) + 0.5 * np.log(np.linalg.det(self.cov_[class_idx]))) - \
-            0.5 * np.dot(
-                np.dot(
-                    (x - self.mean_[class_idx]).T, np.linalg.inv(self.cov_[class_idx])),
-                    (x - self.mean_[class_idx])
-            ) + self.prior(class_)
-        return log_likelihood
