@@ -3,7 +3,7 @@
 
 
 from gda import SingleDimensionTwoClassGDA, MultiDimensionsTwoClassGDA
-from naive_bayes import TwoDimensionNB
+from naive_bayes import TwoClassBinaryFeatureNB, TwoClassDiscreteFeatureNB
 import numpy as np
 import pandas as pd
 from tools import cross_validation
@@ -40,11 +40,27 @@ if __name__ == "__main__":
     # print mg.cov_
     # print mg.predict(test_data)
 
-    data = pd.read_csv(base_path+"spambase/spambase.csv")
-    kf = KFold(data.shape[0], n_folds=10, shuffle=True)
-    nb = TwoDimensionNB()
-    for train_index, test_index in kf:
-        train_data, test_data = data.ix[train_index], data.ix[test_index]
-    nb.train(train_data)
+    # data = pd.read_csv(base_path+"spambase/spambase.csv")
+    # kf = KFold(data.shape[0], n_folds=10, shuffle=True)
+    # nb = TwoDimensionNB()
+    # for train_index, test_index in kf:
+        # train_data, test_data = data.ix[train_index], data.ix[test_index]
+    # nb.train(train_data)
     # nb.predict(test_data)
-    nb.perform(nb.predict(test_data), test_data.as_matrix()[:, -1])
+    # nb.perform(nb.predict(test_data), test_data.as_matrix()[:, -1])
+
+    spamdata = pd.read_csv(base_path + "ex6DataPrepared/train-features-100.csv", sep=" ")
+    label = pd.read_csv(base_path + "ex6DataPrepared/train-labels-100.csv", sep=" ")
+    nb = TwoClassDiscreteFeatureNB()
+    kf = KFold(label.shape[0], n_folds=10, shuffle=True)
+    for train_index, test_index in kf:
+        train_label, test_label = label.ix[train_index], label.ix[test_index]
+        train_label.index += 1
+        test_label.index += 1
+        train_data = spamdata[spamdata["email_id"].isin(train_label.index)]
+        test_data = spamdata[spamdata["email_id"].isin(test_label.index)]
+    nb.train(train_data, train_label)
+    # print test_label.index[0]
+    # print test_label.ix[test_label.index[0]]
+    words_vector = test_data[test_data["email_id"] == test_label.index[0]]
+    print nb.classify(words_vectors)

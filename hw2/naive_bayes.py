@@ -2,8 +2,10 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import division
+from collections import Counter
 import numpy as np
 import pandas as pd
+from scipy.stats import binom
 
 
 class BasicNaiveBayes(object):
@@ -23,10 +25,10 @@ class BasicNaiveBayes(object):
             self.priors[label] = [class_count[label]/self.n_sample]
         self.priors = pd.DataFrame(self.priors)
 
-class TwoDimensionNB(BasicNaiveBayes):
+class TwoClassBinaryFeatureNB(BasicNaiveBayes):
 
     def __init__(self):
-        super(TwoDimensionNB, self).__init__()
+        super(TwoClassBinaryFeatureNB, self).__init__()
 
     def _compute_probability_of_each_word(self, training_data, word, class_):
         return training_data[(training_data[word] == 1) & (training_data["class"] == class_)].shape[0]/self.n_sample
@@ -78,7 +80,6 @@ class TwoDimensionNB(BasicNaiveBayes):
         n_test_sample = test_data.shape[0]
         predicted_list = []
         for idx in test_data.index:
-            # print idx
             test_sample = test_data.ix[idx]
             predicted_list.append(
                 self.classify(test_sample)
@@ -93,3 +94,77 @@ class TwoDimensionNB(BasicNaiveBayes):
         print count
 
 
+class TwoClassDiscreteFeatureNB(BasicNaiveBayes):
+
+    def __init__(self):
+        super(TwoClassDiscreteFeatureNB, self).__init__()
+
+    def build_dictionary(self, word_count_set, minimum_count):
+        self.dictionary = {}
+        for key, val in word_count_set.iteritems():
+            if val >= minimum_count:
+                self.dictionary[key] = [val]
+        self.dictionary = pd.DataFrame(self.dictionary)
+
+    def train(self, training_word_matrix, label):
+        self.n_sample = label.shape[0]
+        word_count_set = Counter(training_word_matrix["word_index"])
+        self.build_dictionary(word_count_set, 0)
+        self.compute_priors(label)
+        self.compute_alpha(training_word_matrix, label)
+
+    def compute_priors(self, label):
+        class_count = Counter(label["class"])
+        self._class_list = [k for k in class_count.keys()]
+        priors = {}
+        for c in self._class_list:
+            print self.n_sample
+            priors[c] = [
+                label[label["class"]== c].count()[0]/self.n_sample
+            ]
+        self.priors = pd.DataFrame(priors)
+
+    def compute_alpha(self, training_data, label):
+        alpha_table = []
+        for c in self._class_list:
+            print "Compute class %s" %str(c)
+            alpha = {}
+            idx = label[label["class"] == c].index
+            # Change to 1-index
+            idx += 1
+            data_idx_with_given_class = idx
+            samples = training_data[training_data.email_id.isin(data_idx_with_given_class)]
+            word_subset = samples[samples.word_index.isin(self.dictionary.columns)]
+            total_word_count = word_subset["count"].sum()
+            for word in self.dictionary.columns:
+                current_word_count = samples[samples.word_index == word]["count"].sum()
+                alpha[word] = (current_word_count + 1)/(total_word_count + self.dictionary.shape[1])
+            alpha_table.append(alpha)
+        self.alpha_table = pd.DataFrame(alpha_table)
+
+    def log_bionimial_function(self, word_vector, class_):
+        f = 0
+        for x in word_vector["word_index"]:
+            if x in self.dictionary:
+                f += binom.pmf(word_vector[word_vector["word_index"] == x]["count"].sum(),
+                                 word_vector["count"].sum(),
+                                 self.alpha_table.ix[class_][x]
+                               )
+        return f
+
+    def classify(self, word_vectors):
+        # TODO define the data structure of word_vectors
+        predicted_list = []
+        maximal = -np.inf
+        predicted_class = None
+        for each_vector in word_vectors:
+            for c in self._class_list:
+                likelihood = self.log_bionimial_function(each_vector, c)
+                if likelihood > maximal:
+                    predicted_class = c
+            predicted_list.append[predicted_class]
+        return predicted_class
+
+    def perform(self, predicted_list, test_label):
+        # TODO: evaluate the accuracy
+        pass
