@@ -6,6 +6,7 @@ from collections import Counter
 import numpy as np
 import pandas as pd
 from scipy.stats import binom
+from evaluator import Evaluator
 
 
 class BasicNaiveBayes(object):
@@ -51,8 +52,7 @@ class TwoClassBinaryFeatureNB(BasicNaiveBayes):
 
     def classify(self, test_word_vector):
         '''
-        The data type for test_word_vector is pandas DataFrame:
-
+        The data structure of test_word_vector is pandas DataFrame:
             #  word1  word2  word3
             0    1      0      1
 
@@ -168,8 +168,7 @@ class TwoClassDiscreteFeatureNB(BasicNaiveBayes):
 
     def perform(self, predicted_list, test_label):
         # TODO: evaluate the accuracy
-        count = 0
-        for idx in predicted_list.index:
-            if predicted_list.ix[idx][0] == test_label.ix[idx][0]:
-                count += 1
-        return count
+        print predicted_list
+        print test_label
+        e = Evaluator(predicted_list, test_label, 1)
+        e.score()
