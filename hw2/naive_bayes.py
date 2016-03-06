@@ -118,7 +118,6 @@ class TwoClassDiscreteFeatureNB(BasicNaiveBayes):
         self._class_list = [k for k in class_count.keys()]
         priors = {}
         for c in self._class_list:
-            print self.n_sample
             priors[c] = [
                 label[label["class"]== c].count()[0]/self.n_sample
             ]
@@ -127,7 +126,6 @@ class TwoClassDiscreteFeatureNB(BasicNaiveBayes):
     def compute_alpha(self, training_data, label):
         alpha_table = []
         for c in self._class_list:
-            print "Compute class %s" %str(c)
             alpha = {}
             idx = label[label["class"] == c].index
             # Change to 1-index
@@ -154,17 +152,24 @@ class TwoClassDiscreteFeatureNB(BasicNaiveBayes):
 
     def classify(self, word_vectors):
         # TODO define the data structure of word_vectors
-        predicted_list = []
+        predicted_list = {}
         maximal = -np.inf
         predicted_class = None
-        for each_vector in word_vectors:
+        email_ids = []
+        for email_id, each_vector in word_vectors.groupby("email_id"):
+            email_ids.append(email_id)
             for c in self._class_list:
                 likelihood = self.log_bionimial_function(each_vector, c)
                 if likelihood > maximal:
+                    maximal = likelihood
                     predicted_class = c
-            predicted_list.append[predicted_class]
-        return predicted_class
+            predicted_list[email_id] = [predicted_class]
+        return pd.DataFrame(predicted_list, index=["class"]).T
 
     def perform(self, predicted_list, test_label):
         # TODO: evaluate the accuracy
-        pass
+        count = 0
+        for idx in predicted_list.index:
+            if predicted_list.ix[idx][0] == test_label.ix[idx][0]:
+                count += 1
+        return count
