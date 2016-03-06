@@ -51,16 +51,25 @@ if __name__ == "__main__":
 
     spamdata = pd.read_csv(base_path + "ex6DataPrepared/train-features-100.csv", sep=" ")
     label = pd.read_csv(base_path + "ex6DataPrepared/train-labels-100.csv", sep=" ")
-    nb = TwoClassDiscreteFeatureNB()
     kf = KFold(label.shape[0], n_folds=10, shuffle=True)
     for train_index, test_index in kf:
+        print "===="
         train_label, test_label = label.ix[train_index], label.ix[test_index]
         train_label.index += 1
         test_label.index += 1
         train_data = spamdata[spamdata["email_id"].isin(train_label.index)]
         test_data = spamdata[spamdata["email_id"].isin(test_label.index)]
-    nb.train(train_data, train_label)
+        nb = TwoClassDiscreteFeatureNB()
+        nb.train(train_data, train_label)
     # print test_label.index[0]
     # print test_label.ix[test_label.index[0]]
-    words_vector = test_data[test_data["email_id"] == test_label.index[0]]
-    print nb.classify(words_vectors)
+    # print test_label
+        word_vectors = test_data[test_data["email_id"].isin(test_label.index)]
+    # for email_id, df in word_vectors.groupby("email_id"):
+        # print df
+    # print words_vector
+    # print nb.classify(word_vectors)
+        print nb.perform(nb.classify(word_vectors), test_label)
+        print "===="
+    # for e in test_label.index:
+        # print test_label.ix[e][0]
