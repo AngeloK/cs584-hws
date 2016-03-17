@@ -53,7 +53,6 @@ class GaussianDiscriminantAnalysis(object):
             except:
                 # Ingore invalid value
                 pass
-        # print "class %s %s" % (class_, str(count))
         return count/self.n_sample
 
     def is_parameter_valid(self, predicted_class, testing_class):
@@ -78,7 +77,6 @@ class GaussianDiscriminantAnalysis(object):
                     maximum_likelihood = pro
                     predicted = c
             predicted_class.append(predicted)
-        # print predicted_class
         return np.array(predicted_class)
 
     def confusion_matrix(self, predicted_class, testing_class, selected_class=None):
@@ -153,7 +151,6 @@ class SingleDimensionTwoClassGDA(GaussianDiscriminantAnalysis):
         self._compute_main_and_variance(training_data)
 
     def _compute_main_and_variance(self, training_data):
-        # If axis=0, then this function will compute the mean of column.
         self.mean_ = []
         self.variance_ = []
         for idx, c in enumerate(self._class_list):
@@ -174,13 +171,13 @@ class SingleDimensionTwoClassGDA(GaussianDiscriminantAnalysis):
         return log_likelihood
 
 
-class MultiDimensionsTwoClassGDA(GaussianDiscriminantAnalysis):
+class MultiDimensionsGDA(GaussianDiscriminantAnalysis):
 
     def __init__(self):
-        super(MultiDimensionsTwoClassGDA, self).__init__()
+        super(MultiDimensionsGDA, self).__init__()
 
     def compute_parameters(self, training_data, class_col_idx):
-        super(MultiDimensionsTwoClassGDA, self).compute_parameters(training_data, class_col_idx)
+        super(MultiDimensionsGDA, self).compute_parameters(training_data, class_col_idx)
         self._compute_main_and_covariance_matrix(training_data)
         self._dimension = training_data.shape[1] - 1
 
@@ -200,3 +197,56 @@ class MultiDimensionsTwoClassGDA(GaussianDiscriminantAnalysis):
                     (x - self.mean_[class_idx])
             ) + self.prior(class_)
         return log_likelihood
+
+    def confusion_matrix(self, predicted_class, testing_class):
+        print predicted_class
+        print testing_class
+
+
+class MultiDimensionsTwoClassGDA(MultiDimensionsGDA):
+
+    def __init__(self):
+        super(MultiDimensionsTwoClassGDA, self).__init__()
+
+    def confusion_matrix(self, predicted_class, testing_class, selected_class=None):
+        # selected_class defined as the value we decided as positive
+        if not self.is_parameter_valid(predicted_class, testing_class):
+            raise DataLengthNotMatchError
+        # Compute each variable as 0
+        if not selected_class:
+            selected_class = self._class_list[0]
+        true_positive = 0
+        true_negative = 0
+        false_positive = 0
+        false_negative = 0
+
+        n_sample = predicted_class.shape[0]
+        for sample_index in range(n_sample):
+            if testing_class[sample_index] == selected_class:
+                if predicted_class[sample_index] == testing_class[sample_index]:
+                    true_positive += 1
+                else:
+                    false_positive += 1
+            else:
+                if predicted_class[sample_index] == testing_class[sample_index]:
+                    true_negative += 1
+                else:
+                    false_negative += 1
+        print "TP %d" %true_positive
+        print "FP %d" %false_positive
+        print "TN %d" %true_negative
+        print "FN %d" %false_negative
+
+        self.accuracy = (true_positive + true_negative) / n_sample
+        self.precision = true_positive /(true_positive + false_positive)
+        self.recall = true_positive / (true_positive + false_negative)
+        self.f_measure= 2*self.precision * self.recall/ (self.precision + self.recall)
+
+    def perform(self):
+        if not self.accuracy:
+            print "Please compute confusion matrix first"
+            return
+        print "Accuracy = %.2f" % self.accuracy
+        print "Precision = %.2f" % self.precision
+        print "Recall = %.2f" % self.recall
+        print "F-measure = %.2f" % self.f_measure

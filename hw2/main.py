@@ -2,9 +2,13 @@
 # -*- coding: utf-8 -*-
 
 
+<<<<<<< HEAD
 from gda import SingleDimensionTwoClassGDA, MultiDimensionsTwoClassGDA
 from naive_bayes import TwoClassBinaryFeatureNB, TwoClassDiscreteFeatureNB
 from evaluator import Evaluator
+=======
+from gda import SingleDimensionTwoClassGDA, MultiDimensionsGDA, MultiDimensionsTwoClassGDA
+>>>>>>> feature/p-r-curve
 import numpy as np
 import pandas as pd
 from tools import cross_validation
@@ -17,8 +21,11 @@ if __name__ == "__main__":
     # sv = SingleDimensionTwoClassGDA()
     # best_sv = SingleDimensionTwoClassGDA()
     # data = pd.read_csv(base_path+"iris/2-d-iris.csv")
+<<<<<<< HEAD
     # best_accuracy = 0
     kf = KFold(100, n_folds=10, shuffle=True)
+=======
+>>>>>>> feature/p-r-curve
     # for train_index, test_index in kf:
         # print "===="
         # train_data, test_data = data.ix[train_index], data.ix[test_index]
@@ -57,6 +64,22 @@ if __name__ == "__main__":
     # p_ = best_mv.predict(data1)
     # best_mv.confusion_matrix(p_, data1.as_matrix()[:, -1])
 
+<<<<<<< HEAD
+=======
+    data1 = pd.read_csv(base_path+"iris/iris-full.csv")
+    kf = KFold(data1.shape[0], n_folds=10, shuffle=True)
+    for train_index, test_index in kf:
+        print "===="
+        train_data, test_data = data1.ix[train_index], data1.ix[test_index]
+        mg = MultiDimensionsTwoClassGDA()
+        mg.train(train_data, -1)
+        # print test_data.as_matrix()[:, -1]
+        print mg.predict(test_data)
+        # mg.confusion_matrix(mg.predict(test_data), test_data.as_matrix()[:, -1])
+        # mg.perform()
+        print "===="
+        print "\n"
+>>>>>>> feature/p-r-curve
 
     # print mg.mean_
     # print mg.cov_

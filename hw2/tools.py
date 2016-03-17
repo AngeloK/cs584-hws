@@ -22,3 +22,7 @@ def cross_validation(data, testing_data_index, folder=10):
     # Divide data by 'folder'
 
     return testing_data, testing_data_size, training_data, training_data_size
+
+
+def plot_precision_recall_curve(precision, recall):
+    pass
