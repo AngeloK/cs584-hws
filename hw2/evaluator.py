@@ -12,6 +12,7 @@ class Evaluator(object):
         self.true_condition = true_condition
         self.postive = positive
         self.class_dim = class_dim
+        self.accuracy = None
 
     def score(self):
         if self.class_dim == "two":
@@ -43,7 +44,7 @@ class Evaluator(object):
             if (true_positive + false_positive) == 0:
                 self.recall = np.nan
             else:
-                self.recall = true_negative / (true_negative + false_negative)
+                self.recall = true_negative / (true_positive + false_negative)
             if self.precision == np.nan or self.recall == np.nan:
                 self.f_measure = np.nan
             else:

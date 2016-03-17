@@ -73,6 +73,7 @@ class GaussianDiscriminantAnalysis(object):
             predicted = ""
             for c in self._class_list:
                 pro = self.likelihood(testing_sample[sample_index, :], c)
+                print "pro= %.2f" %pro
                 if pro > maximum_likelihood:
                     maximum_likelihood = pro
                     predicted = c
@@ -109,19 +110,37 @@ class GaussianDiscriminantAnalysis(object):
         print "TN %d" %true_negative
         print "FN %d" %false_negative
 
+        if (true_positive + false_positive) == 0:
+            self.precision = np.nan
+        else:
+            self.precision = (true_positive) / (true_positive + false_positive)
+        if (true_positive + false_positive) == 0:
+            self.recall = np.nan
+        else:
+            self.recall = true_negative / (true_negative + false_negative)
+        if self.precision == np.nan or self.recall == np.nan:
+            self.f_measure = np.nan
+        else:
+            self.f_measure = (2*self.recall * self.precision / \
+                                    (self.precision + self.recall))
+
         self.accuracy = (true_positive + true_negative) / n_sample
         self.precision = true_positive /(true_positive + false_positive)
         self.recall = true_positive / (true_positive + false_negative)
         self.f_measure= 2*self.precision * self.recall/ (self.precision + self.recall)
-
-    def perform(self):
-        if not self.accuracy:
-            print "Please compute confusion matrix first"
-            return
         print "Accuracy = %.2f" % self.accuracy
         print "Precision = %.2f" % self.precision
         print "Recall = %.2f" % self.recall
-        print "F-measure = %.2f" % self.f_measure
+        print "F-Measure = %.2f" % self.f_measure
+
+    # def perform(self):
+        # if not self.accuracy:
+            # print "Please compute confusion matrix first"
+            # return
+        # print "Accuracy = %.2f" % self.accuracy
+        # print "Precision = %.2f" % self.precision
+        # print "Recall = %.2f" % self.recall
+        # print "F-measure = %.2f" % self.f_measure
 
 
 class SingleDimensionTwoClassGDA(GaussianDiscriminantAnalysis):
@@ -163,6 +182,7 @@ class MultiDimensionsTwoClassGDA(GaussianDiscriminantAnalysis):
     def compute_parameters(self, training_data, class_col_idx):
         super(MultiDimensionsTwoClassGDA, self).compute_parameters(training_data, class_col_idx)
         self._compute_main_and_covariance_matrix(training_data)
+        self._dimension = training_data.shape[1] - 1
 
     def _compute_main_and_covariance_matrix(self, training_data):
         self.mean_ = training_data.groupby(self.class_column_name).mean().as_matrix()
@@ -173,7 +193,7 @@ class MultiDimensionsTwoClassGDA(GaussianDiscriminantAnalysis):
 
     def likelihood(self, x, class_):
         class_idx = self._class_list.index(class_)
-        log_likelihood = -(2/self.n_sample * np.log(2 * np.pi) + 0.5 * np.log(np.linalg.det(self.cov_[class_idx]))) - \
+        log_likelihood = -(2/self._dimension * np.log(2 * np.pi) + 0.5 * np.log(np.linalg.det(self.cov_[class_idx]))) - \
             0.5 * np.dot(
                 np.dot(
                     (x - self.mean_[class_idx]).T, np.linalg.inv(self.cov_[class_idx])),
