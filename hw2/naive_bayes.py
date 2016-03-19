@@ -78,20 +78,15 @@ class TwoClassBinaryFeatureNB(BasicNaiveBayes):
 
     def predict(self, test_data):
         n_test_sample = test_data.shape[0]
-        predicted_list = []
+        predicted_list = {}
         for idx in test_data.index:
             test_sample = test_data.ix[idx]
-            predicted_list.append(
-                self.classify(test_sample)
-            )
-        return predicted_list
+            predicted_list[idx] = [self.classify(test_sample)]
+        return pd.DataFrame(predicted_list, index=["class"]).T
 
-    def perform(self, predicted, test):
-        count = 0
-        for i in range(len(predicted)):
-            if predicted[i] == test[i]:
-                count += 1
-        print count
+    def perform(self, predicted, test_label):
+        e = Evaluator(predicted, test_label, 1)
+        return e
 
 
 class TwoClassDiscreteFeatureNB(BasicNaiveBayes):
@@ -171,4 +166,4 @@ class TwoClassDiscreteFeatureNB(BasicNaiveBayes):
         print predicted_list
         print test_label
         e = Evaluator(predicted_list, test_label, 1)
-        e.score()
+        return e

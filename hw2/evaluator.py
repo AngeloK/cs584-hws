@@ -44,7 +44,7 @@ class Evaluator(object):
             if (true_positive + false_positive) == 0:
                 self.recall = np.nan
             else:
-                self.recall = true_negative / (true_positive + false_negative)
+                self.recall = true_positive / (true_positive + false_negative)
             if self.precision == np.nan or self.recall == np.nan:
                 self.f_measure = np.nan
             else:
@@ -57,4 +57,3 @@ class Evaluator(object):
             print "F-Measure = %.2f" % self.f_measure
         else:
             pass
-
