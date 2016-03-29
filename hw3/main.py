@@ -10,10 +10,12 @@ import matplotlib.pyplot as plt
 from sklearn.cross_validation import KFold
 from evaluator import Evaluator
 from sklearn.preprocessing import PolynomialFeatures
+from sklearn.datasets import fetch_mldata
+from matplotlib import cm
 
 
 if __name__ == "__main__":
-    iris = load_iris()
+    # iris = load_iris()
     # print iris
     # X = iris.data[:100, :2]
     # X = iris.data[:100, :]
@@ -57,34 +59,34 @@ if __name__ == "__main__":
     # plt.plot(x, y_)
     # plt.show()
 
-    X = iris.data
-    y = iris.target
-    x_min = int(min(X[:, 0]))
-    x_max = int(max(X[:, 0]))+1
-    kf = KFold(X.shape[0], n_folds=10, shuffle=True)
-    plt.scatter(X[:, 0], X[:, 1], c=y)
-    plt.xlabel("sepal length")
-    plt.ylabel("sepal width")
+    # X = iris.data
+    # y = iris.target
+    # x_min = int(min(X[:, 0]))
+    # x_max = int(max(X[:, 0]))+1
+    # kf = KFold(X.shape[0], n_folds=10, shuffle=True)
+    # plt.scatter(X[:, 0], X[:, 1], c=y)
+    # plt.xlabel("sepal length")
+    # plt.ylabel("sepal width")
 
-    polynomial_matrix = PolynomialFeatures(degree = 1)
-    X = polynomial_matrix.fit_transform(X)
-    maximal_acc = 0
-    best_kl = None
-    for train_index, test_index in kf:
-        X_train, X_test = X[train_index], X[test_index]
-        y_train, y_test = y[train_index], y[test_index]
-        kl = KClassLogisticRegression()
-        kl.fit(X, y, 0.001, 10000)
-        test = pd.DataFrame(y_test, columns=["class"])
-        predicted = pd.DataFrame(kl.predict(X_test), columns=["class"])
+    # polynomial_matrix = PolynomialFeatures(degree = 1)
+    # X = polynomial_matrix.fit_transform(X)
+    # maximal_acc = 0
+    # best_kl = None
+    # for train_index, test_index in kf:
+        # X_train, X_test = X[train_index], X[test_index]
+        # y_train, y_test = y[train_index], y[test_index]
+        # kl = KClassLogisticRegression()
+        # kl.fit(X, y, 0.001, 10000)
+        # test = pd.DataFrame(y_test, columns=["class"])
+        # predicted = pd.DataFrame(kl.predict(X_test), columns=["class"])
 
-        print "=============================="
-        print "Test_label"
-        print test
-        print "------------------------------"
-        print "Predicted_label"
-        print predicted
-        print "=============================="
+        # print "=============================="
+        # print "Test_label"
+        # print test
+        # print "------------------------------"
+        # print "Predicted_label"
+        # print predicted
+        # print "=============================="
         # l = LogisticRegression()
         # l.fit(X_train, y_train, 0.001, 500)
         # print "Y_predict"
@@ -92,17 +94,17 @@ if __name__ == "__main__":
         # print "Y_test"
         # test = pd.DataFrame(y_test, columns=["class"])
         # print "\n"
-        e = Evaluator(predicted, test, 1, 3)
-        print e.score()
-        if e.accuracy > maximal_acc:
-            maximal_acc = e.accuracy
-            best_kl = kl
+        # e = Evaluator(predicted, test, 1, 3)
+        # print e.score()
+        # if e.accuracy > maximal_acc:
+            # maximal_acc = e.accuracy
+            # best_kl = kl
 
-    predicted_total = pd.DataFrame(kl.predict(X), columns=["class"])
-    y_total = pd.DataFrame(y, columns=["class"])
-    e_total = Evaluator(predicted_total, y_total, 1, 3)
-    print "Result of predicting the whole dataset:"
-    print e_total.score()
+    # predicted_total = pd.DataFrame(kl.predict(X), columns=["class"])
+    # y_total = pd.DataFrame(y, columns=["class"])
+    # e_total = Evaluator(predicted_total, y_total, 1, 3)
+    # print "Result of predicting the whole dataset:"
+    # print e_total.score()
 
     #######################################
     # Plot Classification Boundrary for k-class
@@ -171,3 +173,23 @@ if __name__ == "__main__":
     1   1  33  16
     2   0  10  40
     '''
+
+    mnist = fetch_mldata('MNIST original')
+    mnist.data.shape
+    mnist.target.shape
+    np.unique(mnist.target)
+
+    X, y = mnist.data / 255., mnist.target
+    X_train, X_test = X[:60000], X[60000:]
+    y_train, y_test = y[:60000], y[60000:]
+    size_train=len(y_train)
+    size_test=len(y_test)
+
+    idx_0_train = [k for k in range(size_train) if y_train[k] == 0]
+    idx_1_train = [k for k in range(size_train) if y_train[k] == 1]
+    idx_0_test = [k for k in range(size_test) if y_test[k] == 0]
+    idx_1_test = [k for k in range(size_test) if y_test[k] == 1]
+    ind_train = idx_0_train + idx_1_train
+    ind_test = idx_0_test + idx_1_test
+    X_train, X_test = X_train[ind_train, :], X_test[ind_test, :]
+    y_train, y_test = y_train[ind_train], y_test[ind_test]
