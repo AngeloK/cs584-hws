@@ -26,6 +26,7 @@ class LogisticRegression(object):
             temp_thetas = temp_thetas.reshape(thetas.shape)
             thetas = thetas - temp_thetas
         self.coef_ = thetas
+        print thetas
 
     def predict(self, X_predict):
         y_predict = np.dot(X_predict, self.coef_)
@@ -51,9 +52,9 @@ class KClassLogisticRegression(object):
         self.attr_count = n
         self._split_class(y)
         thetas = []
-        for idx, c in enumerate(self._class_list):
+        for i in range(iteration):
             theta = np.ones((n, 1))
-            for i in range(iteration):
+            for idx, c in enumerate(self._class_list):
                 h = sigmoid(np.dot(X, theta))
                 indicator = self.indicator(y, c)
                 indicator = indicator.reshape((X.shape[0], 1))
