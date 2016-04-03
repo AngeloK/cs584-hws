@@ -3,7 +3,7 @@
 
 from __future__ import division
 import numpy as np
-from lgregression import sigmoid, LogisticRegression
+from lgregression import sigmoid, softmax, LogisticRegression
 from sklearn.preprocessing import PolynomialFeatures
 
 
@@ -87,6 +87,7 @@ class MLP(object):
             # update v
             temp_v = np.empty(self.parameter_v_last.shape)
             for idx in range(self.output):
+                # y_hat_j = softmax()
                 d_j = d[:, idx].reshape((self.m_sample, 1))
                 v_j = np.sum(d_j * Z, axis=0).reshape((1, self.neurons_count + 1))
                 temp_v[idx, :] = v_j
