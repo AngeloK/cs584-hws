@@ -1,11 +1,21 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import division
 import numpy as np
 
 
 def sigmoid(matZ):
     return 1.0/(1+np.exp(-matZ))
+
+
+def softmax(X, cls_idx, thetas):
+    prior_sum = 0
+
+    for i in range(len(thetas)):
+        prior_sum += np.exp(np.dot(X, thetas[i]))
+
+    return np.exp(np.dot(X, thetas[cls_idx])) / prior_sum
 
 
 class LogisticRegression(object):
@@ -26,7 +36,6 @@ class LogisticRegression(object):
             temp_thetas = temp_thetas.reshape(thetas.shape)
             thetas = thetas - temp_thetas
         self.coef_ = thetas
-        print thetas
 
     def predict(self, X_predict):
         y_predict = np.dot(X_predict, self.coef_)
@@ -52,16 +61,20 @@ class KClassLogisticRegression(object):
         self.attr_count = n
         self._split_class(y)
         thetas = []
-        for i in range(iteration):
+
+        # Initialize paramters.
+        for i in range(len(self._class_list)):
             theta = np.ones((n, 1))
+            thetas.append(theta)
+
+        for i in range(iteration):
             for idx, c in enumerate(self._class_list):
-                h = sigmoid(np.dot(X, theta))
+                h = softmax(X, idx, thetas)
                 indicator = self.indicator(y, c)
                 indicator = indicator.reshape((X.shape[0], 1))
                 temp_theta = self.learning_rate * (np.sum((h-indicator) * X, axis=0))
                 temp_theta = temp_theta.reshape(theta.shape)
-                theta = theta - temp_theta
-            thetas.append(theta)
+                thetas[idx] = thetas[idx] - temp_theta
         self.coef_ = thetas
 
     def _split_class(self, y):
