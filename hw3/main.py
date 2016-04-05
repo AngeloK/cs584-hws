@@ -18,41 +18,45 @@ from sklearn.neural_network import MLPClassifier
 from nolearn.dbn import DBN
 import time
 
-mnist = fetch_mldata('MNIST original')
-mnist.data.shape
-mnist.target.shape
-np.unique(mnist.target)
+# mnist = fetch_mldata('MNIST original')
+# mnist.data.shape
+# mnist.target.shape
+# np.unique(mnist.target)
 
-X, y = mnist.data / 255., mnist.target
-# X_train, X_test = X[:60000], X[60000:]
-# y_train, y_test = y[:60000], y[60000:]
-size = len(y)
-# size_train=len(y_train)
-# size_test=len(y_test)
+# X, y = mnist.data / 255., mnist.target
+# # X_train, X_test = X[:60000], X[60000:]
+# # y_train, y_test = y[:60000], y[60000:]
+# size = len(y)
+# # size_train=len(y_train)
+# # size_test=len(y_test)
 
-ind = [ k for k in range(size) if y[k]==0 or y[k]==1]
-X = X[ind, :]
-y = y[ind]
+# ind = [ k for k in range(size) if y[k]==0 or y[k]==1]
+# X = X[ind, :]
+# y = y[ind]
 
 
 def two_class_lg(iteration=100):
-    global X, y
 
+    iris = load_iris()
+    X = iris.data[:100, :2]
+    # # X = iris.data
+    # x_min = int(min(X[:, 0])) - 1
+    # x_max = int(max(X[:, 0])) + 1
+    y = iris.target[:100]
     # iris = load_iris()
     # print iris
-    # X = iris.data[:100, :2]
-    # X = iris.data
     x_min = int(min(X[:, 0])) - 1
     x_max = int(max(X[:, 0])) + 1
     # y = iris.target[:100]
-    # plt.scatter(X[:, 0], X[:, 1], c=y)
-    # plt.xlabel("sepal length")
-    # plt.ylabel("sepal width")
-    # plt.title("Iris")
+    plt.scatter(X[:, 0], X[:, 1], c=y)
+    plt.xlabel("sepal length")
+    plt.ylabel("sepal width")
+    plt.title("Iris")
     # plt.show()
     kf = KFold(X.shape[0], n_folds=10, shuffle=True)
 
-    polynomial_matrix = PolynomialFeatures(degree = 1)
+    # Create polynomial matrix.
+    polynomial_matrix = PolynomialFeatures(degree = 3)
     X = polynomial_matrix.fit_transform(X)
     maximal_acc = 0
     best_lg = None
@@ -66,21 +70,25 @@ def two_class_lg(iteration=100):
         print "Y_test"
         test = pd.DataFrame(y_test, columns=["class"])
         print "\n"
-        e = Evaluator(predicted, test, 1)
-        e.score()
-        if e.accuracy > maximal_acc:
-            maximal_acc = e.accuracy
+        e = classification_report(predicted, test)
+        print e
+        a = accuracy_score(predicted, test)
+        if a > maximal_acc:
+            maximal_acc = a
             best_lg = l
     predicted_total = pd.DataFrame(l.predict(X), columns=["class"])
     y_total = pd.DataFrame(y, columns=["class"])
-    e_total = Evaluator(predicted_total, y_total, 1)
+    # e_total = Evaluator(predicted_total, y_total, 1)
     print "Result of predicting the whole dataset:"
-    e_total.score()
-    coef = best_lg.coef_
-    coef = coef.T
-    x = np.array([i for i in range(x_min, x_max)])
-    y_ = (-coef[0, 0] - coef[0, 1] * x) / coef[0, 2]
-    plt.plot(x, y_, label="iteration=%d" %iteration)
+    e_total = classification_report(y_total, predicted_total)
+    a_total = accuracy_score(y_total, predicted_total)
+    print a_total
+    print e_total
+    # coef = best_lg.coef_
+    # coef = coef.T
+    # x = np.array([i for i in range(x_min, x_max)])
+    # y_ = (-coef[0, 0] - coef[0, 1] * x) / coef[0, 2]
+    # plt.plot(x, y_, label="iteration=%d" %iteration)
     # plt.show()
 
 
@@ -95,11 +103,11 @@ if __name__ == "__main__":
     ############################################################################
     iris = load_iris()
     # # print iris
-    # X = iris.data[:100, :2]
+    X = iris.data[:100, :2]
     # # X = iris.data
     # x_min = int(min(X[:, 0])) - 1
     # x_max = int(max(X[:, 0])) + 1
-    # y = iris.target[:100]
+    y = iris.target[:100]
     # plt.scatter(X[:, 0], X[:, 1], c=y)
     # plt.xlabel("sepal length")
     # plt.ylabel("sepal width")
@@ -253,14 +261,14 @@ if __name__ == "__main__":
     2   0  10  40
     '''
 
-    # mnist = fetch_mldata('MNIST original')
-    # mnist.data.shape
-    # mnist.target.shape
-    # np.unique(mnist.target)
+    mnist = fetch_mldata('MNIST original')
+    mnist.data.shape
+    mnist.target.shape
+    np.unique(mnist.target)
 
     X, y = mnist.data / 255., mnist.target
-    # X_train, X_test = X[:60000], X[60000:]
-    # y_train, y_test = y[:60000], y[60000:]
+    X_train, X_test = X[:60000], X[60000:]
+    y_train, y_test = y[:60000], y[60000:]
     # size_train=len(y_train)
     # size_test=len(y_test)
     size = len(y)
@@ -285,7 +293,6 @@ if __name__ == "__main__":
 
     kf = KFold(training_size, n_folds=10, shuffle=True)
     X = X[ind, :]
-    print X
     y = y[ind]
 
     for train_index, test_index in kf:
@@ -318,11 +325,11 @@ if __name__ == "__main__":
         # print classification_report(y_test, p)
 
 
-        h = [i for i in range(1,1000, 200)]
+        # h = [i for i in range(1,1000, 200)]
 
         dbn = DBN(
             [X_train.shape[1], 200, 3],
-            learn_rates = 0.0001 * i,
+            learn_rates = 0.0001,
             learn_rate_decays = 0.9,
             epochs = 10,
             verbose = 1
