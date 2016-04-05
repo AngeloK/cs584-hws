@@ -76,7 +76,8 @@ target/
 # dataset
 dataset/
 *.zip
-data/
-report/
+*/data/
+*/report/
+*/code/
 # Ignore IPpython notebook temp files
 *.ipynb
