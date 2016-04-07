@@ -3,11 +3,15 @@
 
 from cvxopt import matrix, solvers
 import numpy as np
+from sklearn.preprocessing import PolynomialFeatures
 
 class SVM(object):
 
-    def __init__(self):
-        pass
+    def __init__(self, kernel="linear", degree=1):
+        self.kernel = kernel
+
+        # This parameter is used for polynomial model.
+        self.degree = degree
 
     def _preprocess_label(self, y):
         from collections import Counter
@@ -33,16 +37,23 @@ class SVM(object):
         for p in new_para:
             print p.size
 
-
         s = solvers.qp(*new_para)
         return s
 
     def _compute_parameter(self, X, y):
-        m, n = X.shape
-        X_ = np.dot(X, X.T)
-        y_ = np.dot(y, y.T)
+        if self.kernel == "polynomial":
+            polynomial_matrix = PolynomialFeatures(degree = 4)
+            X = polynomial_matrix.fit_transform(X)
+            X_ = np.dot(X, X.T)
+            P = y.T * X_ * y
+        elif self.kernel == "radial":
+            pass
+        else:
+            X_ = np.dot(X, X.T)
+            y_ = np.dot(y, y.T)
+            P = X_ * y_
+        m, n = X_.shape
 
-        P = X_ * y_
         minus_i = -1* np.identity(m)
         i = np.identity(m)
         G = np.concatenate((minus_i, i), axis=0).T
@@ -54,15 +65,14 @@ class SVM(object):
         A = y
 
         self.alpha = np.array(self._qp_solver(P, q, G, h ,A, b)['x'])
-        # print np.dot(self.alpha.T, y)
-
         w = np.dot((y * X).T, self.alpha)
 
         sp_idx = []
         for idx, val in enumerate(self.alpha):
             if val[0] > 0.001:
                 sp_idx.append(idx)
-
+            else:
+                val[0] = 0
         X_sp = X[sp_idx]
         y_sp = y[sp_idx]
         w_0 = np.mean(y_sp - np.dot(X_sp, w))
